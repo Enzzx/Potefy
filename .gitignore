@@ -1,0 +1,26 @@
+# Logs
+logs
+*.log
+potefyfront/npm-debug.log*
+potefyfront/yarn-debug.log*
+potefyfront/yarn-error.log*
+potefyfront/pnpm-debug.log*
+potefyfront/lerna-debug.log*
+
+*/node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+*/.env
