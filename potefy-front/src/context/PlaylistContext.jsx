@@ -15,20 +15,20 @@ export function PlaylistProvider({
         setSelectedPlaylists
     ] = useState([]);
 
-    function togglePlaylist(id) {
+    function togglePlaylist(playlist) {
         setSelectedPlaylists(
             (prev) => {
                 const exists =
-                    prev.includes(id);
+                    prev.some((item) => item.id === playlist.id);
 
                 if (exists) {
                     return prev.filter(
                         (item) =>
-                            item !== id
+                            item.id !== playlist.id
                     );
                 }
 
-                return [...prev, id];
+                return [...prev, playlist];
             }
         );
     }

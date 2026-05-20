@@ -6,7 +6,7 @@ export default function PlaylistCard({
     return (
         <button
             onClick={() =>
-                onSelect(playlist.id)
+                onSelect(playlist)
             }
             className={`
                 w-full text-left

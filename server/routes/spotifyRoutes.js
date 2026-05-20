@@ -52,7 +52,7 @@ router.post(
     async (req, res) => {
         try {
             const {
-                playlistIds
+                playlists
             } = req.body;
 
             let allTracks =
@@ -62,18 +62,18 @@ router.post(
                 new Set();
 
             // pega tracks
-            for (const playlistId of playlistIds) {
+            for (const playlist of playlists) {
                 const rawTracks =
                     await getPlaylistTracks(
                         req.user
                             .accessToken,
-                        playlistId
+                        playlist.id
                     ); 
                 
                 const tracks =
                     normalizeTracks(
                         rawTracks,
-                        playlistId
+                        playlist.id
                     );
                     
 

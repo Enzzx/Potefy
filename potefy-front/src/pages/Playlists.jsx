@@ -164,7 +164,7 @@ export default function Playlists() {
                                     playlist
                                 }
                                 selected={selectedPlaylists.includes(
-                                    playlist.id
+                                    playlist
                                 )}
                                 onSelect={
                                     togglePlaylist

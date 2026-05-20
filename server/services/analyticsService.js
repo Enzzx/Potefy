@@ -123,6 +123,11 @@ export async function analyzePlaylists(
             )
             .slice(0, 20);
 
+    const overlap =
+    calculateOverlap(
+        playlistsTracks
+    );
+
     return {
         summary: {
             totalSongs,
@@ -138,7 +143,103 @@ export async function analyzePlaylists(
 
         topArtists,
 
-        genres
+        genres,
+
+        overlap
     };
 }
 
+function calculateOverlap(
+    playlistsTracks
+) {
+    const playlistMap =
+        new Map();
+
+    // agrupa tracks por playlist
+    for (const track of playlistsTracks) {
+        for (const playlistId of
+            track.playlistIds) {
+            if (
+                !playlistMap.has(
+                    playlistId
+                )
+            ) {
+                playlistMap.set(
+                    playlistId,
+                    new Set()
+                );
+            }
+
+            playlistMap
+                .get(
+                    playlistId
+                )
+                .add(track.id);
+        }
+    }
+
+    const playlistIds =
+        Array.from(
+            playlistMap.keys()
+        );
+
+    const overlap = [];
+
+    for (
+        let i = 0;
+        i <
+        playlistIds.length;
+        i++
+    ) {
+        for (
+            let j = i + 1;
+            j <
+            playlistIds.length;
+            j++
+        ) {
+            const first =
+                playlistIds[i];
+
+            const second =
+                playlistIds[j];
+
+            const setA =
+                playlistMap.get(
+                    first
+                );
+
+            const setB =
+                playlistMap.get(
+                    second
+                );
+
+            const repeated =
+                [...setA].filter(
+                    (trackId) =>
+                        setB.has(
+                            trackId
+                        )
+                );
+
+            overlap.push({
+                playlistA:
+                    first,
+
+                playlistB:
+                    second,
+
+                repeatedCount:
+                    repeated.length,
+
+                repeatedTracks:
+                    repeated
+            });
+        }
+    }
+
+    return overlap.sort(
+        (a, b) =>
+            b.repeatedCount -
+            a.repeatedCount
+    );
+}

@@ -16,13 +16,13 @@ export async function getUserPlaylists() {
 }
 
 export async function analyzePlaylists(
-    playlistIds
+    playlists
 ) {
     const req =
         await api.post(
             "/spotify/analyze",
             {
-                playlistIds
+                playlists
             }
         );
 
