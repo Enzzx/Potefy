@@ -101,7 +101,6 @@ router.post(
                     )
                 );
 
-            console.log("lista artistas: ", artists)
             const artistsMap =
                 new Map(
                     artists.map(
@@ -124,7 +123,7 @@ router.post(
                 analysis
             );
         } catch (err) {
-            //console.error(err);
+            console.error(err);
 
             res.status(500).json({
                 error:

@@ -18,9 +18,8 @@ const router =
 router.get(
     "/login",
     (req, res) => {
-        const scope =
-            "playlist-read-private playlist-read-collaborative";
-
+        const scope = "playlist-read-private playlist-read-collaborative user-read-private user-read-email";
+        
         const authUrl =
             "https://accounts.spotify.com/authorize?" +
             new URLSearchParams({
