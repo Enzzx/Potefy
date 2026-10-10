@@ -1,6 +1,7 @@
 export default function StatsCard({
     title,
-    value
+    value,
+    children
 }) {
     return (
         <div className="
@@ -16,6 +17,8 @@ export default function StatsCard({
             <h2 className="text-2xl font-semibold mt-2">
                 {value}
             </h2>
+
+            {children}
         </div>
     );
 }

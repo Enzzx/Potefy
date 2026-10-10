@@ -36,3 +36,12 @@ export async function getPlaylistById(id) {
 
     return req.data;
 }
+
+export async function createPlaylist(data) {
+    const req = await api.post(
+        "/spotify/playlists",
+        data
+    );
+
+    return req.data;
+}

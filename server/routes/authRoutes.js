@@ -1,6 +1,6 @@
 import express from "express";
 import axios from "axios";
-import jwt from "jsonwebtoken";
+import { randomBytes } from "node:crypto";
 
 import authMiddleware from "../middleware/authMiddleware.js";
 
@@ -12,14 +12,43 @@ import {
     getUserProfile
 } from "../services/spotifyService.js";
 
+import {
+    createSessionToken,
+    setSessionCookie,
+    clearSessionCookie
+} from "../utils/session.js";
+
 const router =
     express.Router();
+
+const SCOPES = [
+    "playlist-read-private",
+    "playlist-read-collaborative",
+    "playlist-modify-public",
+    "playlist-modify-private",
+    "user-read-private",
+    "user-read-email"
+].join(" ");
 
 router.get(
     "/login",
     (req, res) => {
-        const scope = "playlist-read-private playlist-read-collaborative user-read-private user-read-email";
-        
+        const state =
+            randomBytes(16).toString(
+                "hex"
+            );
+
+        res.cookie(
+            "oauth_state",
+            state,
+            {
+                httpOnly: true,
+                secure: false,
+                sameSite: "lax",
+                maxAge: 10 * 60 * 1000
+            }
+        );
+
         const authUrl =
             "https://accounts.spotify.com/authorize?" +
             new URLSearchParams({
@@ -29,10 +58,12 @@ router.get(
                 client_id:
                     spotifyConfig.clientId,
 
-                scope,
+                scope: SCOPES,
 
                 redirect_uri:
-                    spotifyConfig.redirectUri
+                    spotifyConfig.redirectUri,
+
+                state
             });
 
         res.redirect(authUrl);
@@ -42,8 +73,23 @@ router.get(
 router.get(
     "/callback",
     async (req, res) => {
-        const { code } =
-            req.query;
+        const {
+            code,
+            state
+        } = req.query;
+
+        if (
+            !state ||
+            state !==
+                req.cookies.oauth_state
+        ) {
+            return res.status(400).json({
+                error:
+                    "Invalid state"
+            });
+        }
+
+        res.clearCookie("oauth_state");
 
         try {
             const tokenRes =
@@ -79,7 +125,9 @@ router.get(
                 );
 
             const {
-                access_token
+                access_token,
+                refresh_token,
+                expires_in
             } =
                 tokenRes.data;
 
@@ -89,46 +137,39 @@ router.get(
                 );
 
             const token =
-                jwt.sign(
-                    {
-                        id: profile.id,
-                        displayName:
-                            profile.display_name,
+                createSessionToken({
+                    id: profile.id,
 
-                        image:
-                            profile
-                                .images[0]
-                                ?.url,
+                    displayName:
+                        profile.display_name,
 
-                        accessToken:
-                            access_token
-                    },
+                    image:
+                        profile
+                            .images[0]
+                            ?.url,
 
-                    process.env
-                        .JWT_SECRET,
+                    accessToken:
+                        access_token,
 
-                    {
-                        expiresIn:
-                            "7d"
-                    }
-                );
+                    refreshToken:
+                        refresh_token,
 
-            res.cookie(
-                "token",
-                token,
-                {
-                    httpOnly: true,
-                    secure: false,
-                    sameSite:
-                        "lax"
-                }
-            );
+                    expiresAt:
+                        Date.now() +
+                        expires_in * 1000
+                });
+
+            setSessionCookie(res, token);
 
             res.redirect(
                 `${process.env.CLIENT_URL}/playlists`
             );
         } catch (err) {
-            //console.error(err);
+            console.error(
+                "Auth callback failed:",
+                err.response?.status ||
+                    err.message
+            );
 
             res.status(500).json({
                 error:
@@ -142,16 +183,24 @@ router.get(
     "/me",
     authMiddleware,
     (req, res) => {
-        res.json(req.user);
+        const {
+            id,
+            displayName,
+            image
+        } = req.user;
+
+        res.json({
+            id,
+            displayName,
+            image
+        });
     }
 );
 
 router.get(
     "/logout",
     (req, res) => {
-        res.clearCookie(
-            "token"
-        );
+        clearSessionCookie(res);
 
         res.redirect(
             process.env.CLIENT_URL

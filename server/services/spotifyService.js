@@ -1,7 +1,6 @@
 import axios from "axios";
-import { DatabaseSync } from "node:sqlite"
 
-const db = new DatabaseSync("spotify_api.db")
+import db from "../db/index.js";
 
 export async function getUserProfile(
     accessToken
@@ -23,9 +22,13 @@ export async function getUserProfile(
 export async function getUserPlaylists(
     accessToken
 ) {
-    const req =
-        await axios.get(
-            "https://api.spotify.com/v1/me/playlists",
+    let items = [];
+    let nextUrl =
+        "https://api.spotify.com/v1/me/playlists?limit=50";
+
+    while (nextUrl) {
+        const response = await axios.get(
+            nextUrl,
             {
                 headers: {
                     Authorization:
@@ -34,19 +37,28 @@ export async function getUserPlaylists(
             }
         );
 
-    return req.data.items.map(
+        items = items.concat(response.data.items);
+
+        nextUrl = response.data.next;
+    }
+
+    return items.map(
         (playlist) => ({
             id: playlist.id,
             name: playlist.name,
             owner:
                 playlist.owner
-                    .display_name,
+                    ?.display_name ||
+                playlist.owner?.id ||
+                "Unknown",
+
             totalTracks:
-                playlist.items
-                    .total,
+                playlist.items?.total ??
+                playlist.tracks?.total ??
+                0,
 
             image:
-                playlist.images[0]
+                playlist.images?.[0]
                     ?.url || null
         })
     );
@@ -92,12 +104,16 @@ export async function getArtists(accessToken, artistIds) {
 
     for (const chunk of dbChunks) {
         const inList = chunk.map(() => "?").join(", ");
+        // Usa "_rowid_" (rowid interno) porque a base pré-provisionada
+        // possui uma coluna explícita chamada "rowid", que fica NULL para
+        // artistas inseridos em runtime. O "_rowid_" é consistente para
+        // linhas antigas e novas.
         const query = `
-            SELECT a.rowid, a.id, a.name, a.followers_total, a.popularity, json_group_array(ag.genre) as genres
+            SELECT a._rowid_ AS rowid, a.id, a.name, a.followers_total, a.popularity, json_group_array(ag.genre) as genres
             FROM artists a
-            LEFT JOIN artist_genres ag ON a.rowid = ag.artist_rowid
+            LEFT JOIN artist_genres ag ON a._rowid_ = ag.artist_rowid
             WHERE a.id IN (${inList})
-            GROUP BY a.rowid
+            GROUP BY a._rowid_
         `;
 
         const dbRows = db.prepare(query).all(...chunk);
@@ -161,7 +177,7 @@ export async function getArtists(accessToken, artistIds) {
 
         for (const id of newArtistIds) {
             try {
-                const response = await axios.get(`http://googleusercontent.com/spotify.com/v1/artists/${id}`, {
+                const response = await axios.get(`https://api.spotify.com/v1/artists/${id}`, {
                     headers: { Authorization: `Bearer ${accessToken}` }
                 });
 
@@ -249,6 +265,55 @@ export async function getArtists(accessToken, artistIds) {
     return finalArtistsResult;
 }
 
+// Cria uma playlist na conta do usuário logado.
+// A Spotify Web API usa o campo booleano "public".
+export async function createPlaylist(
+    accessToken,
+    { name, description = "", isPublic = false }
+) {
+    const response = await axios.post(
+        "https://api.spotify.com/v1/me/playlists",
+        {
+            name,
+            description: String(description).slice(0, 300),
+            public: Boolean(isPublic)
+        },
+        {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+            }
+        }
+    );
+
+    return response.data;
+}
+
+// Adiciona faixas a uma playlist. A API aceita no máximo 100
+// URIs por chamada, então enviamos em lotes.
+export async function addPlaylistTracks(
+    accessToken,
+    playlistId,
+    uris
+) {
+    const chunks = chunkArray(uris, 100);
+
+    for (const chunk of chunks) {
+        await axios.post(
+            `https://api.spotify.com/v1/playlists/${playlistId}/items`,
+            { uris: chunk },
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+    }
+
+    return uris.length;
+}
+
 function chunkArray(array, size) {
     const chunks = [];
     for (let i = 0; i < array.length; i += size) {
@@ -262,7 +327,6 @@ async function fetchWikidataGenres(spotifyIds) {
     if (!spotifyIds || spotifyIds.length === 0) return {};
 
     // Formata os IDs para o padrão da query SPARQL: "id1" "id2" "id3"
-    console.log("Ids: ", spotifyIds)
     const formattedIds = spotifyIds.map(id => `"${id}"`).join(' ');
 
     // Otimizado: Removido o rdfs:label e FILTER pesados, injetado o SERVICE nativo

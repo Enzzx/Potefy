@@ -3,20 +3,37 @@ export default function normalizeTracks(
     playlistId
 ) {
     return rawTracks
+        .map((entry) => entry?.item ?? entry?.track)
+        .filter((track) => track)
         .filter(
-            (item) => item.item
+            (track) =>
+                track.type === "track" &&
+                track.id
         )
-        .map((item) => {
-            const track =
-                item.item;
+        .map((track) => {
+            const releaseDate =
+                track.album?.release_date ||
+                null;
+
+            const releaseYear = releaseDate
+                ? parseInt(
+                    releaseDate.slice(
+                        0,
+                        4
+                    ),
+                    10
+                ) || null
+                : null;
 
             return {
                 id: track.id,
 
                 name: track.name,
 
-                artists:
-                    track.artists.map(
+                artists: Array.isArray(
+                    track.artists
+                )
+                    ? track.artists.map(
                         (
                             artist
                         ) => ({
@@ -24,13 +41,26 @@ export default function normalizeTracks(
                             name:
                                 artist.name
                         })
-                    ),
+                    )
+                    : [],
+
+                albumName:
+                    track.album?.name ||
+                    null,
+
+                releaseYear,
+
+                popularity:
+                    track.popularity ?? 0,
 
                 durationMs:
-                    track.duration_ms,
+                    track.duration_ms ??
+                    0,
 
                 explicit:
-                    track.explicit,
+                    Boolean(
+                        track.explicit
+                    ),
 
                 playlistIds: [
                     playlistId
