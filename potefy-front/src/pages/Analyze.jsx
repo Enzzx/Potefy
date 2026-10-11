@@ -178,6 +178,24 @@ export default function Analyze() {
 
     return (
         <Layout>
+            <button
+                onClick={() =>
+                    navigate("/playlists")
+                }
+                className="
+                    mb-4
+                    inline-flex
+                    items-center
+                    gap-2
+                    text-sm
+                    text-zinc-400
+                    hover:text-[#1DB954]
+                    transition-colors
+                "
+            >
+                ← Voltar
+            </button>
+
             <SectionTitle
                 title="Analysis"
                 subtitle={`${selectedPlaylists.length} playlists selected`}

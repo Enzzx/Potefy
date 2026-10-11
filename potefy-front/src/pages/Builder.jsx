@@ -48,6 +48,91 @@ function chipButtonClass(active) {
     `;
 }
 
+function formatDuration(ms) {
+    const totalMinutes = Math.round(
+        (ms || 0) / 60000
+    );
+
+    if (totalMinutes < 1) {
+        return "0 min";
+    }
+
+    if (totalMinutes < 60) {
+        return `${totalMinutes} min`;
+    }
+
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return minutes
+        ? `${hours} h ${minutes} min`
+        : `${hours} h`;
+}
+
+function TrackRow({
+    track,
+    familyLabel,
+    onRemove
+}) {
+    return (
+        <div className="
+            flex
+            items-center
+            gap-3
+            px-2 py-2
+            rounded-lg
+            hover:bg-zinc-800/60
+            transition-colors
+        ">
+            <div className="min-w-0 flex-1">
+                <p className="truncate text-sm">
+                    {track.name}
+                </p>
+
+                <p className="text-xs text-zinc-500 truncate">
+                    {track.artists
+                        .map(
+                            (artist) =>
+                                artist.name
+                        )
+                        .join(", ")}
+
+                    {track.albumName &&
+                        ` · ${track.albumName}`}
+
+                    {track.releaseYear &&
+                        ` (${track.releaseYear})`}
+                </p>
+            </div>
+
+            {familyLabel && (
+                <Chip
+                    label={familyLabel}
+                    id={track.primaryFamily}
+                    className="shrink-0 hidden sm:inline-flex"
+                />
+            )}
+
+            <button
+                onClick={() => onRemove(track.id)}
+                title="Remover da playlist"
+                aria-label={`Remover ${track.name}`}
+                className="
+                    shrink-0
+                    w-7 h-7
+                    rounded-full
+                    text-zinc-500
+                    hover:text-red-400
+                    hover:bg-zinc-800
+                    transition-colors
+                "
+            >
+                ✕
+            </button>
+        </div>
+    );
+}
+
 export default function Builder() {
     const navigate = useNavigate();
 
@@ -79,6 +164,8 @@ export default function Builder() {
 
     const [familyFilter, setFamilyFilter] =
         useState("all");
+
+    const [grouped, setGrouped] = useState(true);
 
     // Rótulo legível de cada família (a partir da análise).
     const familyLabels = useMemo(() => {
@@ -255,6 +342,17 @@ export default function Builder() {
         );
     }, [filteredTracks, analysis]);
 
+    // Duração total da playlist final.
+    const totalDuration = useMemo(
+        () =>
+            builderTracks.reduce(
+                (sum, track) =>
+                    sum + (track.durationMs || 0),
+                0
+            ),
+        [builderTracks]
+    );
+
     async function handleCreate() {
         setError(null);
         setCreated(null);
@@ -327,31 +425,48 @@ export default function Builder() {
     }
 
     return (
-        <Layout>
-            <button
-                onClick={() => navigate("/analyze")}
-                className="
-                    mb-4
-                    inline-flex
-                    items-center
-                    gap-2
-                    text-sm
-                    text-zinc-400
-                    hover:text-[#1DB954]
-                    transition-colors
-                "
-            >
-                ← Voltar
-            </button>
+        <Layout fullHeight>
+            <div className="shrink-0">
+                <button
+                    onClick={() =>
+                        navigate("/analyze")
+                    }
+                    className="
+                        mb-4
+                        inline-flex
+                        items-center
+                        gap-2
+                        text-sm
+                        text-zinc-400
+                        hover:text-[#1DB954]
+                        transition-colors
+                    "
+                >
+                    ← Voltar
+                </button>
 
-            <SectionTitle
-                title="Playlist Builder"
-                subtitle={`${counts.builder} de ${counts.resolved} músicas`}
-            />
+                <SectionTitle
+                    title="Playlist Builder"
+                    subtitle={`${counts.builder} de ${counts.resolved} músicas · ${formatDuration(
+                        totalDuration
+                    )}`}
+                />
+            </div>
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="
+                flex flex-col lg:flex-row
+                gap-6
+                flex-1 min-h-0
+            ">
                 {/* DETALHES */}
-                <SectionCard title="Detalhes">
+                <SectionCard
+                    title="Detalhes"
+                    className="
+                        min-w-0 min-h-0
+                        lg:flex-1
+                        lg:overflow-y-auto
+                    "
+                >
                     <div className="space-y-4">
                         <div>
                             <label className="block text-sm text-zinc-400 mb-2">
@@ -481,103 +596,138 @@ export default function Builder() {
                 {/* MÚSICAS */}
                 <SectionCard
                     title={`Músicas (${counts.builder})`}
+                    className="
+                        min-w-0 min-h-0
+                        lg:flex-1
+                        flex flex-col
+                    "
                 >
-                    {counts.excluded > 0 && (
-                        <button
-                            onClick={clearExclusions}
-                            className="
-                                mb-4
-                                text-sm
-                                text-zinc-400
-                                hover:text-[#1DB954]
-                                transition-colors
-                            "
-                        >
-                            Restaurar{" "}
-                            {counts.excluded}{" "}
-                            removida(s)
-                        </button>
-                    )}
-
                     {builderTracks.length === 0 ? (
-                        <p className="text-sm text-zinc-500">
+                        <p className="text-sm text-zinc-500 shrink-0">
                             Todas as músicas foram
                             removidas. Restaure ou
                             volte para a análise.
                         </p>
                     ) : (
                         <>
-                            <input
-                                type="search"
-                                value={query}
-                                onChange={(event) =>
-                                    setQuery(
-                                        event.target
-                                            .value
-                                    )
-                                }
-                                placeholder="Pesquisar por nome, álbum ou artista..."
-                                className={`
-                                    ${inputClassName}
-                                    mb-4
-                                `}
-                            />
+                            <div className="shrink-0">
+                                <div className="
+                                    mb-3
+                                    flex items-center
+                                    justify-between
+                                    gap-3
+                                ">
+                                    {counts.excluded > 0 ? (
+                                        <button
+                                            onClick={
+                                                clearExclusions
+                                            }
+                                            className="
+                                                text-sm
+                                                text-zinc-400
+                                                hover:text-[#1DB954]
+                                                transition-colors
+                                            "
+                                        >
+                                            Restaurar{" "}
+                                            {
+                                                counts.excluded
+                                            }{" "}
+                                            removida(s)
+                                        </button>
+                                    ) : (
+                                        <span />
+                                    )}
 
-                            {availableFamilies.length >
-                                0 && (
-                                <div className="flex flex-wrap gap-2 mb-4">
                                     <button
                                         onClick={() =>
-                                            setFamilyFilter(
-                                                "all"
+                                            setGrouped(
+                                                (value) =>
+                                                    !value
                                             )
                                         }
                                         className={chipButtonClass(
-                                            familyFilter ===
-                                                "all"
+                                            grouped
                                         )}
                                     >
-                                        Todos
+                                        {grouped
+                                            ? "⊞ Agrupado"
+                                            : "☰ Lista"}
                                     </button>
-
-                                    {availableFamilies.map(
-                                        (family) => (
-                                            <button
-                                                key={
-                                                    family.id
-                                                }
-                                                onClick={() =>
-                                                    setFamilyFilter(
-                                                        family.id
-                                                    )
-                                                }
-                                                className={chipButtonClass(
-                                                    familyFilter ===
-                                                        family.id
-                                                )}
-                                            >
-                                                {
-                                                    family.label
-                                                }
-                                            </button>
-                                        )
-                                    )}
                                 </div>
-                            )}
 
-                            {filteredTracks.length ===
-                            0 ? (
-                                <p className="text-sm text-zinc-500">
-                                    Nenhuma música
-                                    encontrada.
-                                </p>
-                            ) : (
-                                <div className="
-                                    max-h-[32rem]
-                                    overflow-y-auto
-                                    -mx-2
-                                ">
-                                    {groups.map(
+                                <input
+                                    type="search"
+                                    value={query}
+                                    onChange={(event) =>
+                                        setQuery(
+                                            event.target
+                                                .value
+                                        )
+                                    }
+                                    placeholder="Pesquisar por nome, álbum ou artista..."
+                                    className={`
+                                        ${inputClassName}
+                                        mb-4
+                                    `}
+                                />
+
+                                {availableFamilies.length >
+                                    0 && (
+                                    <div className="flex flex-wrap gap-2 mb-4">
+                                        <button
+                                            onClick={() =>
+                                                setFamilyFilter(
+                                                    "all"
+                                                )
+                                            }
+                                            className={chipButtonClass(
+                                                familyFilter ===
+                                                    "all"
+                                            )}
+                                        >
+                                            Todos
+                                        </button>
+
+                                        {availableFamilies.map(
+                                            (family) => (
+                                                <button
+                                                    key={
+                                                        family.id
+                                                    }
+                                                    onClick={() =>
+                                                        setFamilyFilter(
+                                                            family.id
+                                                        )
+                                                    }
+                                                    className={chipButtonClass(
+                                                        familyFilter ===
+                                                            family.id
+                                                    )}
+                                                >
+                                                    {
+                                                        family.label
+                                                    }
+                                                </button>
+                                            )
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="
+                                flex-1 min-h-0
+                                overflow-y-auto
+                                -mx-2
+                            ">
+                                {filteredTracks.length ===
+                                0 ? (
+                                    <p className="px-2 text-sm text-zinc-500">
+                                        Nenhuma música
+                                        encontrada.
+                                    </p>
+                                ) : grouped ? (
+                                    groups.map(
                                         ([
                                             familyId,
                                             familyTracks
@@ -623,94 +773,52 @@ export default function Builder() {
                                                     (
                                                         track
                                                     ) => (
-                                                        <div
+                                                        <TrackRow
                                                             key={
                                                                 track.id
                                                             }
-                                                            className="
-                                                                flex
-                                                                items-center
-                                                                gap-3
-                                                                px-2 py-2
-                                                                rounded-lg
-                                                                hover:bg-zinc-800/60
-                                                                transition-colors
-                                                            "
-                                                        >
-                                                            <div className="min-w-0 flex-1">
-                                                                <p className="truncate text-sm">
-                                                                    {
-                                                                        track.name
-                                                                    }
-                                                                </p>
-
-                                                                <p className="text-xs text-zinc-500 truncate">
-                                                                    {track.artists
-                                                                        .map(
-                                                                            (
-                                                                                artist
-                                                                            ) =>
-                                                                                artist.name
-                                                                        )
-                                                                        .join(
-                                                                            ", "
-                                                                        )}
-
-                                                                    {track.albumName &&
-                                                                        ` · ${track.albumName}`}
-
-                                                                    {track.releaseYear &&
-                                                                        ` (${track.releaseYear})`}
-                                                                </p>
-                                                            </div>
-
-                                                            {track.primaryFamily &&
-                                                                track.primaryFamily !==
-                                                                    "none" && (
-                                                                    <Chip
-                                                                        label={
-                                                                            familyLabels.get(
-                                                                                track.primaryFamily
-                                                                            ) ||
-                                                                            track.primaryFamily
-                                                                        }
-                                                                        id={
-                                                                            track.primaryFamily
-                                                                        }
-                                                                        className="shrink-0 hidden sm:inline-flex"
-                                                                    />
-                                                                )}
-
-                                                            <button
-                                                                onClick={() =>
-                                                                    excludeTrack(
-                                                                        track.id
-                                                                    )
-                                                                }
-                                                                title="Remover da playlist"
-                                                                aria-label={`Remover ${track.name}`}
-                                                                className="
-                                                                    shrink-0
-                                                                    w-7 h-7
-                                                                    rounded-full
-                                                                    text-zinc-500
-                                                                    hover:text-red-400
-                                                                    hover:bg-zinc-800
-                                                                    transition-colors
-                                                                "
-                                                            >
-                                                                ✕
-                                                            </button>
-                                                        </div>
+                                                            track={
+                                                                track
+                                                            }
+                                                            familyLabel={
+                                                                track.primaryFamily
+                                                                    ? familyLabels.get(
+                                                                          track.primaryFamily
+                                                                      )
+                                                                    : null
+                                                            }
+                                                            onRemove={
+                                                                excludeTrack
+                                                            }
+                                                        />
                                                     )
                                                 )}
                                             </div>
                                         )
-                                    )}
-                                </div>
-                            )}
+                                    )
+                                ) : (
+                                    filteredTracks.map(
+                                        (track) => (
+                                            <TrackRow
+                                                key={track.id}
+                                                track={track}
+                                                familyLabel={
+                                                    track.primaryFamily
+                                                        ? familyLabels.get(
+                                                              track.primaryFamily
+                                                          )
+                                                        : null
+                                                }
+                                                onRemove={
+                                                    excludeTrack
+                                                }
+                                            />
+                                        )
+                                    )
+                                )}
+                            </div>
 
-                            <p className="mt-3 text-xs text-zinc-600">
+                            <p className="shrink-0 mt-3 text-xs text-zinc-600">
                                 {
                                     filteredTracks.length
                                 }{" "}
