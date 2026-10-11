@@ -5,7 +5,10 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon app.js"
+    "dev": "nodemon app.js",
+    "db:fetch": "node scripts/fetch-db.mjs",
+    "db:build": "python scripts/build-db.py",
+    "db:optimize": "node scripts/optimize-db.mjs"
   },
   "keywords": [],
   "author": "",

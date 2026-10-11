@@ -1,0 +1,18 @@
+{
+  "name": "spotify_api.db",
+  "release": "data-v1",
+  "url": "https://github.com/Enzzx/Potefy/releases/download/data-v1/spotify_api.db",
+  "sha256": "1d5bf36277330c8c6bb816e5f70cdd2effa072ec3b1cdabcd386b8e3f64432d6",
+  "sizeBytes": 1473175552,
+  "source": {
+    "dataset": "lordpatil/spotify-metadata-by-annas-archive",
+    "datasetUrl": "https://www.kaggle.com/datasets/lordpatil/spotify-metadata-by-annas-archive",
+    "tables": [
+      "artists",
+      "artist_genres"
+    ],
+    "origin": "Anna's Archive Spotify 2025-07 metadata dump",
+    "license": "Apache-2.0"
+  },
+  "notes": "Base otimizada com scripts/optimize-db.mjs (remove idx_artist_rowid + VACUUM). Contem as tabelas artists (15.430.445 linhas) e artist_genres (2.230.468 linhas)."
+}

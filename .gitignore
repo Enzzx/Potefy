@@ -24,4 +24,11 @@ dist-ssr
 *.sw?
 
 */.env
-# server/*.db
+
+# Banco de dados grande (Spotify metadata) - nao versionado.
+# Baixe/regere com: cd server && npm run db:fetch (ou db:build)
+server/*.db
+server/*.db-*
+server/*.db-journal
+server/*.db-wal
+server/*.db-shm

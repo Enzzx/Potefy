@@ -29,12 +29,33 @@ SPOTIFY_CLIENT_SECRET=...
 JWT_SECRET=...
 ```
 
-#### Banco de dados
-O servidor usa um cache local de artistas/gêneros em SQLite (`server/spotify_api.db`),
-criado automaticamente a partir de `server/db/schema.sql` na primeira execução.
-Uma base pré-provisionada com milhões de artistas pode ser colocada em
-`server/spotify_api.db` para acelerar a análise; sem ela o servidor funciona,
-mas busca os gêneros no Spotify/Wikidata sob demanda.
+#### Banco de dados (cache de artistas/gêneros)
+
+O servidor usa um cache local em SQLite (`server/spotify_api.db`). O arquivo é
+criado automaticamente a partir de `server/db/schema.sql` na primeira execução;
+sem a base pré-provisionada o servidor funciona, mas busca os gêneros sob
+demanda (Spotify/Wikidata), o que é bem mais lento.
+
+A base pré-provisionada (~1,4 GB; ~15,4M artistas + 2,2M gêneros) **não é
+versionada** (excede o limite de 100 MB do GitHub). Para obtê-la:
+
+```bash
+cd server
+
+# Opção 1 (recomendada): baixar o asset do Release e validar o SHA-256
+npm run db:fetch          # use `npm run db:fetch -- --force` para forçar
+
+# Opção 2: reconstruir do zero a partir do Kaggle
+#   requer `pip install kaggle pyarrow` e ~/.kaggle/kaggle.json
+npm run db:build
+```
+
+`npm run db:optimize` remove o índice `idx_artist_rowid` (não usado pela
+aplicação) e compacta o arquivo com `VACUUM`.
+
+Fonte dos dados: [Anna's Archive Spotify 2025-07](https://www.kaggle.com/datasets/lordpatil/spotify-metadata-by-annas-archive)
+(tabelas `artists` e `artist_genres`, licença Apache-2.0). URL e hash ficam em
+`server/scripts/db.manifest.json`.
 
 ### Client
 ```
